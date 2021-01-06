@@ -8,6 +8,7 @@
     yarn install
     yarn build
 
+...
 
 
 
