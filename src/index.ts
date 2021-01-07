@@ -11,8 +11,10 @@ import {
     getRegistry,
     getTxHash,
     methods,
-    POLKADOT_SS58_FORMAT
+    POLKADOT_SS58_FORMAT,
 } from '@substrate/txwrapper';
+
+import { rpcToNode } from './rpcToNode';
 
 import chalk from 'chalk';
 import { ArgumentParser } from 'argparse';
@@ -58,10 +60,10 @@ const initTestConnection = async () => {
 
     // Chain Data
     const [chain, chainType, header, finalizedHead] = await Promise.all([
-        await api.rpc.system.chain(),
-        await api.rpc.system.chainType(),
-        await api.rpc.chain.getHeader(),
-        await api.rpc.chain.getFinalizedHead()
+        api.rpc.system.chain(),
+        api.rpc.system.chainType(),
+        api.rpc.chain.getHeader(),
+        api.rpc.chain.getFinalizedHead()
     ]);
 
     console.log(
@@ -173,20 +175,92 @@ const initTransaction = async (api: ApiPromise) => {
      * Block Information
      * All relevant information to create a transaction
      */
-    const [block, blockHash, metaData, genesisHash] = await Promise.all([
-        await api.rpc.chain.getBlock(),
-        await api.rpc.chain.getBlockHash(),
-        await api.rpc.state.getMetadata(),
-        await api.genesisHash,
+    const [
+        { block },
+        blockHash,
+        genesisHash,
+        metadataRpc,
+        { specVersion, transactionVersion }
+    ] = await Promise.all([
+        rpcToNode('chain_getBlock'),
+        rpcToNode('chain_getBlockHash'),
+        rpcToNode('chain_getBlockHash', [0]),
+        rpcToNode('state_getMetadata'),
+        rpcToNode('state_getRuntimeVersion')
     ]);
 
     // Initialize keyring object
     const keyring = new Keyring();
+    // Polkadot type registry
+    const registry = getRegistry('Polkadot', 'polkadot', specVersion.toNumber());
 
-    // Create alice
+    /**
+     * Below are will be two entities involved in the transaction
+     * Alice we will create, and we will assume a transaction amount as well
+     * as Janice's ADDR
+     */
+
+    // Create Alice => implied dev seed
     const alice = keyring.addFromUri('//Alice', { name: 'Alice' }, 'sr25519');
+    // Retrieve Alice Address => SS58-Encoded Address
+    const aliceADDR = deriveAddress(alice.publicKey, POLKADOT_SS58_FORMAT);
+    
+    // Janice credentials, and value
+    const janiceADDR = '5DTestUPts3kjeXSTMyerHihn1uwMfLj8vU8sqF7qYrFabHE';
+    const transactionValue = 12345;
+
+    /**
+     * Below is the unsigned transaction method
+     * transfer takes in 3 parameters
+     * @param args => args specific to the method in the case transfering
+     * @param info => info required to construct transaction
+     * @param options => Registry and metadata used for constructing a method
+     */
+    const txOptions = { metadataRpc, registry }
+
+    const unsigned = methods.balances.transfer(
+        {
+            value: transactionValue,
+            dest: janiceADDR
+        },
+        {
+            address: aliceADDR,
+            blockHash,
+            blockNumber: registry
+                .createType('BlockNumber', block.header.number)
+                .toNumber(),
+            eraPeriod: 64,
+            genesisHash,
+            metadataRpc,
+            nonce: 0,
+            specVersion,
+            tip: 0,
+            transactionVersion
+        },
+        txOptions
+    );
 
 
+    /**
+     * decode takes in 3 arguments
+     * @param unsignedTx => the data to parse as an unsigned transaction
+     * @param options => Runtime-specific data used for decoding the transaction
+     * @param toInt => whether or not to forcibly serialize integers in the call args to base-10
+     * If toInt is false then integers will either be a number or hex
+     */
+    const decodeUnsigned = decode(
+        unsigned,
+        txOptions,
+        true
+    );
+
+    console.log(
+        chalk.cyan(
+            `> Decoded Transaction:
+                To: ${chalk.yellow(decodeUnsigned.method.args.dest)}
+                Amount: ${chalk.yellow(decodeUnsigned.method.args.value)}`
+        )
+    )
 }
 
 // Arg parser
