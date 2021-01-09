@@ -21,7 +21,7 @@ export const rpcToNode = (method: string, params: any[] = []) => {
     // When making calls to JSON-RPC it always takes a POST method
     const requestMethod = 'POST';
     
-    return fetch('', {
+    return fetch('http://localhost:9933', {
         body: JSON.stringify(body),
         headers: requestHeaders, 
         method: requestMethod

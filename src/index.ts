@@ -192,7 +192,7 @@ const initTransaction = async (api: ApiPromise) => {
     // Initialize keyring object
     const keyring = new Keyring();
     // Polkadot type registry
-    const registry = getRegistry('Polkadot', 'polkadot', specVersion.toNumber());
+    const registry = getRegistry('Polkadot', 'polkadot', specVersion);
 
     /**
      * Below are will be two entities involved in the transaction
@@ -260,7 +260,7 @@ const initTransaction = async (api: ApiPromise) => {
                 To: ${chalk.yellow(decodeUnsigned.method.args.dest)}
                 Amount: ${chalk.yellow(decodeUnsigned.method.args.value)}`
         )
-    )
+    );
 }
 
 // Arg parser
