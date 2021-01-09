@@ -58,6 +58,7 @@
     "tweetnacl": "^1.0.3",
     "type": "^1.2.0",
     "typedarray-to-buffer": "^3.1.5",
+    "typescript": "^4.1.3",
     "utf-8-validate": "^5.0.4",
     "util-deprecate": "^1.0.2",
     "websocket": "^1.0.33",
@@ -66,14 +67,16 @@
   },
   "devDependencies": {
     "@types/argparse": "^2.0.5",
+    "@types/memoizee": "^0.4.5",
+    "memoizee": "^0.4.15",
     "ts-node-dev": "^1.1.1"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "tsc": "tsc",
-    "build": "tsc && node ./src/index.js",
-    "build.test.conn": "tsc && node ./src/index.js -w polkadot-dev",
-    "build.dev": "tsc && node ./src/index.js -w polkadot-dev",
+    "build": "npx tsc && node ./lib/index.js",
+    "build.test.conn": "npx tsc && node ./lib/index.js -w test",
+    "build.dev": "npx tsc && node ./lib/index.js -w polkadot-dev",
     "start": "set debug=* && ts-node-dev --respawn --transpileOnly ./src/index.ts"
   },
   "keywords": [],
