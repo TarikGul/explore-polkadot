@@ -14,112 +14,10 @@ import {
     POLKADOT_SS58_FORMAT,
 } from '@substrate/txwrapper';
 
-import { rpcToNode } from './rpcToNode';
+import { rpcToNode, initTestConnection } from './utils';
 
 import chalk from 'chalk';
 import { ArgumentParser } from 'argparse';
-
-/**
- * Initialize a test connection
- * This is an example usage of Polkadots API
- */
-const initTestConnection = async () => {
-    
-    // Web Socket connection
-    const api = await ApiPromise.create({ 
-        provider: new WsProvider('wss://rpc.polkadot.io') 
-    });
-
-    console.log(
-        chalk.cyan(
-            `> [CONNECTION]: ${chalk.yellow('wss://rpc.polkadot.io')}`
-        )
-    )
-
-    console.log(
-        chalk.cyan(
-            `> Polkadot.js API genesis hash ${chalk.yellow(api.genesisHash.toHex())}`
-        )
-    );
-
-    // Test address - Example 
-    const ADDR: string = '5DTestUPts3kjeXSTMyerHihn1uwMfLj8vU8sqF7qYrFabHE';
-
-    const [now, { nonce, data: balances }] = await Promise.all([
-        api.query.timestamp.now(),
-        api.query.system.account(ADDR)
-    ]);
-
-    console.log(
-        chalk.cyan(
-            `> Last Timestamp ${chalk.red(now)}: 
-                Balance => ${chalk.yellow(balances.free)}, 
-                Nonce   => ${chalk.yellow(nonce)}`
-        )
-    );
-
-    // Chain Data
-    const [chain, chainType, header, finalizedHead] = await Promise.all([
-        api.rpc.system.chain(),
-        api.rpc.system.chainType(),
-        api.rpc.chain.getHeader(),
-        api.rpc.chain.getFinalizedHead()
-    ]);
-
-    console.log(
-        chalk.cyan(
-            `> Chain Data:
-                Chain         => ${chalk.yellow(chain)}
-                ChainType     => ${chalk.yellow(chainType)}
-                FinalizedHead => ${chalk.yellow(finalizedHead)}
-                Header:
-                    Number                 => ${chalk.yellow(header.number)}
-                    ParentHash             => ${chalk.yellow(header.parentHash)}
-                    ExtrinsicsRoot         => ${chalk.yellow(header.extrinsicsRoot)}`
-        )
-    )
-
-    // Suscribe to new headers
-    console.log(
-        chalk.cyan(
-            `> Subscribing to latest headers:`
-        )
-    )
-
-    let count: number  = 0;
-
-    const unsubHeads = await api.rpc.chain.subscribeNewHeads((lastHeader) => {
-        console.log(chalk.cyan(`> ${chain}: last block #${chalk.yellow(lastHeader.number)} has hash ${chalk.yellow(lastHeader.hash)}`));
-
-        if (!lastHeader || ++count === 10) {
-            // Unsubscribe
-            console.log(chalk.cyan(`${chalk.red(`> Unsubscribing Headers..`)}`));
-            unsubHeads();
-        }
-    });
-
-    // Subscribe to Multi Queries
-    console.log(
-        chalk.cyan(
-            `> Subscribing to multi queries:`
-        )
-    )
-
-    let multiCount: number = 0;
-
-    const multiUnsub = await api.queryMulti([
-        api.query.timestamp.now,
-        [api.query.system.account, ADDR]
-    ], ([now, data]) => {
-            console.log(chalk.cyan(`> ${now}: data: ${chalk.yellow(data)}`));
-
-            if (multiCount === 3) {
-                // Unsubscribe
-                console.log(chalk.cyan(`> ${chalk.red(`> Unsubscribing Multi Query..`)}`));
-                multiUnsub();
-            };
-    })
-}
 
 /**
  * DEV -- Initialize a connection to node
@@ -274,8 +172,8 @@ const args = parser.parse_args();
 if (require.main === module) {
 
     if(args.ws === 'test') {
-
-        initTestConnection();
+        // Test connection with global network
+        initTestConnection('wss://rpc.polkadot.io');
 
     } else if (args.ws === 'polkadot-dev') {
         // Local port 9944
