@@ -10,6 +10,6 @@
 
 ...
 
-
+TODO make instructions to install and keep polkadot running on local node for new users
 
 
